@@ -1,6 +1,6 @@
 using GameTimeMonitor.Controllers;
-using GameTimeMonitor.Services;
 using GameTimeMonitor.Models;
+using GameTimeMonitor.Services;
 
 namespace GameTimeMonitor.Views
 {
@@ -17,73 +17,74 @@ namespace GameTimeMonitor.Views
             _gameMonitoringService = new GameMonitoringService(_databaseService);
             InitializeComponent();
 
-            // Inicializando a barra de ferramentas
+            // Initializing the toolbar and connecting the event handlers
             InitializeToolStrip();
+            this.Load += Form1_Load;
 
-            this.Load += Form1_Load; // Conecta o método ao evento Load
             _databaseService.InitializeDatabase();
             _gameController.LoadGames();
             _gameMonitoringService.StartMonitoring(_gameController.GetGames());
+
+            // Event handlers for game status and game updates
             _gameMonitoringService.GameStatusChanged += UpdateStatus;
+            _gameMonitoringService.GameUpdated += () =>
+            {
+                if (InvokeRequired)
+                {
+                    Invoke(() => DisplayAllGamesTime());
+                }
+                else
+                {
+                    DisplayAllGamesTime();
+                }
+            };
         }
 
-        // Método que inicializa o ToolStrip
+        // Initializes the ToolStrip and adds the "Add Game" button
         private void InitializeToolStrip()
         {
-            // Criando o ToolStrip
             ToolStrip toolStrip = new ToolStrip();
-            ToolStripButton addGameButton = new ToolStripButton("Adicionar Jogo");
+            ToolStripButton addGameButton = new ToolStripButton("Add Game");
 
-            // Associando o evento de click ao botão
             addGameButton.Click += AddGameButton_Click;
-
-            // Adicionando o botão ao ToolStrip
             toolStrip.Items.Add(addGameButton);
-
-            // Adicionando o ToolStrip ao Form
             this.Controls.Add(toolStrip);
         }
 
-        // Evento de clique para o botão "Adicionar Jogo"
+        // Event handler for the "Add Game" button click
         private void AddGameButton_Click(object sender, EventArgs e)
         {
             using (var addGameForm = new AddGameForm())
             {
-                var result = addGameForm.ShowDialog(); // Exibe o formulário modal
+                var result = addGameForm.ShowDialog();
 
                 if (result == DialogResult.OK)
                 {
                     string gameName = addGameForm.GameName;
                     string gameProcess = addGameForm.GameProcess;
 
-                    // Cria o novo jogo
                     var newGame = new Game
                     {
                         Name = gameName,
                         Process = gameProcess
                     };
 
-                    // Adiciona o jogo ao GameController e salva no arquivo JSON
                     _gameController.AddGame(newGame);
-
-                    // Atualiza a lista de jogos na interface
                     DisplayAllGamesTime();
 
-                    MessageBox.Show("Jogo adicionado com sucesso!");
+                    MessageBox.Show("Game added successfully!");
                 }
             }
         }
 
-
-        // O método Form1_Load que será chamado quando o formulário for carregado
+        // Called when the form is loaded, loading and displaying games
         private void Form1_Load(object sender, EventArgs e)
         {
-            // Carregar jogos e exibir na interface
             _gameController.LoadGames();
-            DisplayAllGamesTime(); // Certifique-se de que esta função está sendo chamada para exibir os jogos
+            DisplayAllGamesTime();
         }
 
-        // Função para exibir os jogos no FlowLayoutPanel
+        // Displays all the games and their play time on the FlowLayoutPanel
         private void DisplayAllGamesTime()
         {
             flowLayoutPanelGames.Controls.Clear();
@@ -100,7 +101,6 @@ namespace GameTimeMonitor.Views
                 double hoursMonth = _databaseService.GetGameTime(game.Name, startMonth, DateTime.Now);
                 double totalHours = _databaseService.GetGameTime(game.Name, DateTime.MinValue, DateTime.Now);
 
-                // Função para formatar o tempo
                 string FormatTime(double timeInMinutes)
                 {
                     if (timeInMinutes < 60)
@@ -129,17 +129,53 @@ namespace GameTimeMonitor.Views
                 {
                     AutoSize = true,
                     MaximumSize = new Size(700, 0),
-                    Text = $"{gameName} - Hoje: {FormatTime(hoursToday)} | Semana: {FormatTime(hoursWeek)} | Mês: {FormatTime(hoursMonth)} | Total: {FormatTime(totalHours)}"
+                    Text = $"{gameName} - Today: {FormatTime(hoursToday)} | Week: {FormatTime(hoursWeek)} | Month: {FormatTime(hoursMonth)} | Total: {FormatTime(totalHours)}"
+                };
+
+                var removeButton = new Button
+                {
+                    Text = "Remove",
+                    AutoSize = true,
+                    Margin = new Padding(10)
+                };
+
+                removeButton.Location = new Point(group.Width - removeButton.Width - 20, 30);
+
+                removeButton.Click += (sender, args) =>
+                {
+                    var result = MessageBox.Show(
+                        $"Are you sure you want to remove the game: {gameName}?",
+                        "Confirm Removal",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question
+                    );
+
+                    if (result == DialogResult.Yes)
+                    {
+                        _gameController.RemoveGame(gameName);
+                        DisplayAllGamesTime();
+                    }
                 };
 
                 group.Controls.Add(label);
+                group.Controls.Add(removeButton);
                 flowLayoutPanelGames.Controls.Add(group);
             }
         }
 
+        // Updates the status label with the current game status
         private void UpdateStatus(string gameName, string status)
         {
-            string message = $"Jogo: {gameName} - {status}";
+            string message;
+
+            if (status == "Running")
+            {
+                message = $"Game running: {gameName}";
+            }
+            else
+            {
+                message = $"Game: {gameName} - {status}";
+            }
 
             if (labelStatus.InvokeRequired)
             {
@@ -150,6 +186,5 @@ namespace GameTimeMonitor.Views
                 labelStatus.Text = message;
             }
         }
-
     }
-}   
+}

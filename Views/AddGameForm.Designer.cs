@@ -19,101 +19,92 @@ namespace GameTimeMonitor.Views
 
         private void InitializeComponent()
         {
-            this.labelGameName = new System.Windows.Forms.Label();
-            this.labelGamePath = new System.Windows.Forms.Label();
-            this.txtGameName = new System.Windows.Forms.TextBox();
-            this.txtGamePath = new System.Windows.Forms.TextBox();
-            this.btnSave = new System.Windows.Forms.Button();
-            this.btnCancel = new System.Windows.Forms.Button();
-            this.btnSelectGamePath = new System.Windows.Forms.Button();  // Inicialização do botão
-
-            this.SuspendLayout();
-
+            labelGameName = new Label();
+            labelGamePath = new Label();
+            txtGameName = new TextBox();
+            txtGamePath = new TextBox();
+            btnSave = new Button();
+            btnCancel = new Button();
+            btnSelectGamePath = new Button();
+            SuspendLayout();
             // 
             // labelGameName
             // 
-            this.labelGameName.AutoSize = true;
-            this.labelGameName.Location = new System.Drawing.Point(12, 15);
-            this.labelGameName.Name = "labelGameName";
-            this.labelGameName.Size = new System.Drawing.Size(60, 13);
-            this.labelGameName.TabIndex = 0;
-            this.labelGameName.Text = "Nome do Jogo";
-
-            // 
-            // txtGameName
-            // 
-            this.txtGameName.Location = new System.Drawing.Point(120, 12);
-            this.txtGameName.Name = "txtGameName";
-            this.txtGameName.Size = new System.Drawing.Size(200, 20);
-            this.txtGameName.TabIndex = 1;
-
+            labelGameName.AutoSize = true;
+            labelGameName.Location = new Point(12, 15);
+            labelGameName.Name = "labelGameName";
+            labelGameName.Size = new Size(132, 25);
+            labelGameName.TabIndex = 0;
+            labelGameName.Text = "Nome do Jogo";
             // 
             // labelGamePath
             // 
-            this.labelGamePath.AutoSize = true;
-            this.labelGamePath.Location = new System.Drawing.Point(12, 45);
-            this.labelGamePath.Name = "labelGamePath";
-            this.labelGamePath.Size = new System.Drawing.Size(87, 13);
-            this.labelGamePath.TabIndex = 2;
-            this.labelGamePath.Text = "Caminho do Jogo";
-
+            labelGamePath.AutoSize = true;
+            labelGamePath.Location = new Point(12, 46);
+            labelGamePath.Name = "labelGamePath";
+            labelGamePath.Size = new Size(154, 25);
+            labelGamePath.TabIndex = 2;
+            labelGamePath.Text = "Caminho do Jogo";
+            // 
+            // txtGameName
+            // 
+            txtGameName.Location = new Point(163, 12);
+            txtGameName.Name = "txtGameName";
+            txtGameName.Size = new Size(273, 31);
+            txtGameName.TabIndex = 1;
             // 
             // txtGamePath
             // 
-            this.txtGamePath.Location = new System.Drawing.Point(120, 42);
-            this.txtGamePath.Name = "txtGamePath";
-            this.txtGamePath.Size = new System.Drawing.Size(200, 20);
-            this.txtGamePath.TabIndex = 3;
-            this.txtGamePath.ReadOnly = true;  // Apenas leitura, já que é preenchido pelo botão
-
+            txtGamePath.Location = new Point(163, 42);
+            txtGamePath.Name = "txtGamePath";
+            txtGamePath.ReadOnly = true;
+            txtGamePath.Size = new Size(273, 31);
+            txtGamePath.TabIndex = 3;
             // 
             // btnSave
             // 
-            this.btnSave.Location = new System.Drawing.Point(120, 80);
-            this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(75, 23);
-            this.btnSave.TabIndex = 4;
-            this.btnSave.Text = "Salvar";
-            this.btnSave.UseVisualStyleBackColor = true;
-            this.btnSave.Click += new System.EventHandler(this.BtnSave_Click);
-
+            btnSave.Location = new Point(396, 163);
+            btnSave.Name = "btnSave";
+            btnSave.Size = new Size(75, 37);
+            btnSave.TabIndex = 4;
+            btnSave.Text = "Salvar";
+            btnSave.UseVisualStyleBackColor = true;
+            btnSave.Click += BtnSave_Click;
             // 
             // btnCancel
             // 
-            this.btnCancel.Location = new System.Drawing.Point(205, 80);
-            this.btnCancel.Name = "btnCancel";
-            this.btnCancel.Size = new System.Drawing.Size(75, 23);
-            this.btnCancel.TabIndex = 5;
-            this.btnCancel.Text = "Cancelar";
-            this.btnCancel.UseVisualStyleBackColor = true;
-            this.btnCancel.Click += new System.EventHandler(this.BtnCancel_Click);
-
+            btnCancel.Location = new Point(477, 163);
+            btnCancel.Name = "btnCancel";
+            btnCancel.Size = new Size(75, 37);
+            btnCancel.TabIndex = 5;
+            btnCancel.Text = "Cancelar";
+            btnCancel.UseVisualStyleBackColor = true;
+            btnCancel.Click += BtnCancel_Click;
             // 
             // btnSelectGamePath
             // 
-            this.btnSelectGamePath.Location = new System.Drawing.Point(330, 40);
-            this.btnSelectGamePath.Name = "btnSelectGamePath";
-            this.btnSelectGamePath.Size = new System.Drawing.Size(75, 23);
-            this.btnSelectGamePath.TabIndex = 6;
-            this.btnSelectGamePath.Text = "Selecionar";
-            this.btnSelectGamePath.UseVisualStyleBackColor = true;
-            this.btnSelectGamePath.Click += new System.EventHandler(this.BtnSelectGamePath_Click);
-
+            btnSelectGamePath.Location = new Point(442, 42);
+            btnSelectGamePath.Name = "btnSelectGamePath";
+            btnSelectGamePath.Size = new Size(110, 33);
+            btnSelectGamePath.TabIndex = 6;
+            btnSelectGamePath.Text = "Selecionar";
+            btnSelectGamePath.UseVisualStyleBackColor = true;
+            btnSelectGamePath.Click += BtnSelectGamePath_Click;
             // 
             // AddGameForm
             // 
-            this.ClientSize = new System.Drawing.Size(434, 121);
-            this.Controls.Add(this.btnSelectGamePath);
-            this.Controls.Add(this.btnCancel);
-            this.Controls.Add(this.btnSave);
-            this.Controls.Add(this.txtGamePath);
-            this.Controls.Add(this.labelGamePath);
-            this.Controls.Add(this.txtGameName);
-            this.Controls.Add(this.labelGameName);
-            this.Name = "AddGameForm";
-            this.Text = "Adicionar Jogo";
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            ClientSize = new Size(564, 212);
+            Controls.Add(btnSelectGamePath);
+            Controls.Add(btnCancel);
+            Controls.Add(btnSave);
+            Controls.Add(txtGamePath);
+            Controls.Add(labelGamePath);
+            Controls.Add(txtGameName);
+            Controls.Add(labelGameName);
+            Name = "AddGameForm";
+            Text = "Adicionar Jogo";
+            ResumeLayout(false);
+            PerformLayout();
         }
     }
 }

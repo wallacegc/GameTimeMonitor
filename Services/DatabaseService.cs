@@ -1,5 +1,5 @@
-using Microsoft.Data.Sqlite;
 using GameTimeMonitor.Models;
+using Microsoft.Data.Sqlite;
 
 namespace GameTimeMonitor.Services
 {
