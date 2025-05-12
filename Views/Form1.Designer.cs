@@ -8,52 +8,56 @@
         private System.Windows.Forms.ToolStrip toolStrip;
         private System.Windows.Forms.ToolStripButton addGameButton;
 
+        /// <summary>
+        /// Releases the resources used when the form is disposed.
+        /// </summary>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null)) components.Dispose();
             base.Dispose(disposing);
         }
 
+        /// <summary>
+        /// Initializes the form components, including controls and visual properties.
+        /// </summary>
         private void InitializeComponent()
         {
-            this.labelStatus = new System.Windows.Forms.Label();
-            this.flowLayoutPanelGames = new System.Windows.Forms.FlowLayoutPanel();
-            this.toolStrip = new System.Windows.Forms.ToolStrip();
-            this.addGameButton = new System.Windows.Forms.ToolStripButton();
+            labelStatus = new Label();
+            flowLayoutPanelGames = new FlowLayoutPanel();
+            addGameButton = new ToolStripButton();
+            SuspendLayout();
 
-            // 
-            // labelStatus
-            // 
-            this.labelStatus.AutoSize = true;
-            this.labelStatus.Location = new System.Drawing.Point(12, 40); // Ajustado para ficar abaixo do ToolStrip
-            this.labelStatus.Name = "labelStatus";
-            this.labelStatus.Size = new System.Drawing.Size(0, 13);
-            this.labelStatus.TabIndex = 0;
+            // Setting up labelStatus
+            labelStatus.AutoSize = true;
+            labelStatus.Location = new Point(12, 40);
+            labelStatus.Name = "labelStatus";
+            labelStatus.Size = new Size(0, 25);
+            labelStatus.TabIndex = 0;
 
-            // 
-            // flowLayoutPanelGames
-            // 
-            this.flowLayoutPanelGames.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-                                                                                    | System.Windows.Forms.AnchorStyles.Left)
-                                                                                    | System.Windows.Forms.AnchorStyles.Right)));
-            this.flowLayoutPanelGames.AutoScroll = true;
-            this.flowLayoutPanelGames.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
-            this.flowLayoutPanelGames.Location = new System.Drawing.Point(12, 70); // Já estava correto
-            this.flowLayoutPanelGames.Name = "flowLayoutPanelGames";
-            this.flowLayoutPanelGames.Size = new System.Drawing.Size(760, 400);
-            this.flowLayoutPanelGames.TabIndex = 1;
-            this.flowLayoutPanelGames.WrapContents = false;
+            // Setting up flowLayoutPanelGames
+            flowLayoutPanelGames.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            flowLayoutPanelGames.AutoScroll = true;
+            flowLayoutPanelGames.FlowDirection = FlowDirection.TopDown;
+            flowLayoutPanelGames.Location = new Point(12, 70);
+            flowLayoutPanelGames.Name = "flowLayoutPanelGames";
+            flowLayoutPanelGames.Size = new Size(760, 359);
+            flowLayoutPanelGames.TabIndex = 1;
+            flowLayoutPanelGames.WrapContents = false;
 
-            // 
-            // Form1
-            // 
-            this.ClientSize = new System.Drawing.Size(784, 441);
-            this.Controls.Add(this.flowLayoutPanelGames);
-            this.Controls.Add(this.labelStatus);
-            this.Name = "Form1";
-            this.Text = "Game Time Monitor";
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            // Setting up addGameButton
+            addGameButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            addGameButton.Name = "addGameButton";
+            addGameButton.Size = new Size(23, 23);
+            addGameButton.Text = "Add Game";
+
+            // Form setup
+            ClientSize = new Size(784, 441);
+            Controls.Add(flowLayoutPanelGames);
+            Controls.Add(labelStatus);
+            Name = "Form1";
+            Text = "Game Time Monitor";
+            ResumeLayout(false);
+            PerformLayout();
         }
     }
 }

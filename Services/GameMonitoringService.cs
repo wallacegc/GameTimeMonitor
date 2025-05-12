@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using GameTimeMonitor.Models;
-using GameTimeMonitor.Services;
 
 namespace GameTimeMonitor.Services
 {
@@ -9,17 +8,19 @@ namespace GameTimeMonitor.Services
         private readonly DatabaseService _databaseService;
         private Dictionary<string, DateTime> gameStartTimes = new();
 
-        public event Action<string, string> GameStatusChanged; // Nome do jogo, Status (Rodando/Parou)
+        // Event to notify the interface that the game status has changed (Game Name, Status - Running/Stopped)
+        public event Action<string, string> GameStatusChanged;
 
-
-        // Evento para notificar a interface de que os dados foram atualizados
+        // Event to notify the interface that the game data has been updated
         public event Action GameUpdated;
 
+        // Constructor to initialize the GameMonitoringService with a database service
         public GameMonitoringService(DatabaseService databaseService)
         {
             _databaseService = databaseService;
         }
 
+        // Method to start monitoring the list of games
         public void StartMonitoring(List<Game> games)
         {
             new Thread(() =>
@@ -29,16 +30,18 @@ namespace GameTimeMonitor.Services
                     while (true)
                     {
                         MonitorRunningGames(games);
-                        Thread.Sleep(5000); // Aguarda 5 segundos antes de verificar novamente
+                        Thread.Sleep(5000); // Wait 5 seconds before checking again
                     }
                 }
                 catch (Exception ex)
                 {
-                    // Captura exceções que possam ocorrer na thread
-                    MessageBox.Show($"Erro na monitorização do jogo: {ex.Message}");
+                    // Catch any exceptions that may occur in the thread
+                    MessageBox.Show($"Error in game monitoring: {ex.Message}");
                 }
             }).Start();
         }
+
+        // Method to monitor the running games and update status
         private void MonitorRunningGames(List<Game> games)
         {
             foreach (var game in games)
@@ -48,7 +51,7 @@ namespace GameTimeMonitor.Services
                     if (!gameStartTimes.ContainsKey(game.Name))
                     {
                         gameStartTimes[game.Name] = DateTime.Now;
-                        GameStatusChanged?.Invoke(game.Name, "Rodando");
+                        GameStatusChanged?.Invoke(game.Name, "Running");
                     }
                 }
                 else if (gameStartTimes.ContainsKey(game.Name))
@@ -57,6 +60,7 @@ namespace GameTimeMonitor.Services
                     DateTime end = DateTime.Now;
                     TimeSpan duration = end - start;
 
+                    // Save the session to the database
                     _databaseService.SaveSessionToDatabase(new Session
                     {
                         GameName = game.Name,
@@ -67,12 +71,13 @@ namespace GameTimeMonitor.Services
 
                     gameStartTimes.Remove(game.Name);
                     GameUpdated?.Invoke();
-                    GameStatusChanged?.Invoke(game.Name, $"Parou - Duração: {Math.Round(duration.TotalMinutes)} min");
+                    GameStatusChanged?.Invoke(game.Name, $"Stopped - Duration: {Math.Round(duration.TotalMinutes)} min");
                 }
             }
         }
+
+        // Method to check if a process is running by its name
         private bool IsProcessRunning(string processName) =>
             Process.GetProcessesByName(processName).Length > 0;
     }
-
 }

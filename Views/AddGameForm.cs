@@ -1,6 +1,3 @@
-using System;
-using System.Windows.Forms;
-using System.IO;
 using System.ComponentModel;
 
 namespace GameTimeMonitor.Views
@@ -9,21 +6,24 @@ namespace GameTimeMonitor.Views
     {
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string GameName { get; private set; }
+
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string GameProcess { get; private set; }
 
+        // Constructor to initialize the AddGameForm
         public AddGameForm()
         {
             InitializeComponent();
         }
 
+        // Event handler for the save button click
         private void BtnSave_Click(object sender, EventArgs e)
         {
             GameName = txtGameName.Text;
 
             if (string.IsNullOrEmpty(GameName) || string.IsNullOrEmpty(GameProcess))
             {
-                MessageBox.Show("Por favor, preencha todos os campos.");
+                MessageBox.Show("Please fill in all fields.");
             }
             else
             {
@@ -32,28 +32,29 @@ namespace GameTimeMonitor.Views
             }
         }
 
+        // Event handler for the cancel button click
         private void BtnCancel_Click(object sender, EventArgs e)
         {
             this.DialogResult = DialogResult.Cancel;
             this.Close();
         }
 
-        // Função para abrir o OpenFileDialog e selecionar o arquivo do jogo
+        // Function to open the OpenFileDialog and select the game's executable file
         private void BtnSelectGamePath_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
-                openFileDialog.Filter = "Executáveis (*.exe)|*.exe|Todos os arquivos (*.*)|*.*";
-                openFileDialog.Title = "Selecione o Arquivo Executável do Jogo";
+                openFileDialog.Filter = "Executables (*.exe)|*.exe|All files (*.*)|*.*";
+                openFileDialog.Title = "Select the Game Executable File";
 
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
-                    // Extrair apenas o nome do arquivo sem a extensão
+                    // Extract the file name without the extension
                     string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(openFileDialog.FileName);
 
-                    // Preenche o campo do caminho com o caminho completo, mas salva apenas o nome do arquivo
+                    // Fill in the path field with the full path, but save only the file name
                     txtGamePath.Text = openFileDialog.FileName;
-                    GameProcess = fileNameWithoutExtension; // Salva apenas o nome do arquivo sem a extensão
+                    GameProcess = fileNameWithoutExtension; // Save only the file name without the extension
                 }
             }
         }
