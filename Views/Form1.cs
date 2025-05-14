@@ -1,6 +1,8 @@
-using GameTimeMonitor.Controllers;
+﻿using GameTimeMonitor.Controllers;
 using GameTimeMonitor.Models;
 using GameTimeMonitor.Services;
+using Microsoft.Data.Sqlite;
+using Newtonsoft.Json;
 
 namespace GameTimeMonitor.Views
 {
@@ -40,14 +42,38 @@ namespace GameTimeMonitor.Views
             };
         }
 
-        // Initializes the ToolStrip and adds the "Add Game" button
+        // Initializes the ToolStrip and adds the "Add Game", "Backup" and "Restore" buttons
         private void InitializeToolStrip()
         {
             ToolStrip toolStrip = new ToolStrip();
-            ToolStripButton addGameButton = new ToolStripButton("Add Game");
 
+            // Botão de adicionar jogo
+            ToolStripButton addGameButton = new ToolStripButton("Add Game");
             addGameButton.Click += AddGameButton_Click;
             toolStrip.Items.Add(addGameButton);
+
+            // Botão para atualizar o arquivo games.json
+            ToolStripButton updateButton = new ToolStripButton("Update");
+            updateButton.Click += (sender, e) =>
+            {
+                try
+                {
+                    var backupService = new BackupService();
+                    backupService.UpdateGamesJson();
+
+                    _gameController.LoadGames();
+                    DisplayAllGamesTime();
+
+                    MessageBox.Show("games.json successfully updated!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error updating games.json: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            toolStrip.Items.Add(updateButton);
+
             this.Controls.Add(toolStrip);
         }
 
@@ -89,18 +115,24 @@ namespace GameTimeMonitor.Views
         {
             flowLayoutPanelGames.Controls.Clear();
 
-            foreach (var game in _gameController.GetGames())
+            var today = DateTime.Today;
+            var startWeek = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Monday); // começa na segunda
+            var startMonth = new DateTime(today.Year, today.Month, 1);
+
+            var gamesWithTimes = _gameController.GetGames()
+                .Select(game => new
+                {
+                    Game = game,
+                    TimeToday = _databaseService.GetGameTime(game.Name, today, DateTime.Now),
+                    TimeWeek = _databaseService.GetGameTime(game.Name, startWeek, DateTime.Now),
+                    TimeMonth = _databaseService.GetGameTime(game.Name, startMonth, DateTime.Now),
+                    TimeTotal = _databaseService.GetGameTime(game.Name, DateTime.MinValue, DateTime.Now)
+                })
+                .OrderByDescending(g => g.TimeTotal) // ordena pelo tempo total decrescente
+                .ToList();
+
+            foreach (var g in gamesWithTimes)
             {
-                var gameName = game.Name;
-                var today = DateTime.Today;
-                var startWeek = today.AddDays(-(int)today.DayOfWeek);
-                var startMonth = new DateTime(today.Year, today.Month, 1);
-
-                double hoursToday = _databaseService.GetGameTime(game.Name, today, DateTime.Now);
-                double hoursWeek = _databaseService.GetGameTime(game.Name, startWeek, DateTime.Now);
-                double hoursMonth = _databaseService.GetGameTime(game.Name, startMonth, DateTime.Now);
-                double totalHours = _databaseService.GetGameTime(game.Name, DateTime.MinValue, DateTime.Now);
-
                 string FormatTime(double timeInMinutes)
                 {
                     if (timeInMinutes < 60)
@@ -118,7 +150,7 @@ namespace GameTimeMonitor.Views
 
                 var group = new GroupBox
                 {
-                    Text = game.Name,
+                    Text = g.Game.Name,
                     Width = 740,
                     AutoSize = true,
                     Padding = new Padding(10),
@@ -129,7 +161,7 @@ namespace GameTimeMonitor.Views
                 {
                     AutoSize = true,
                     MaximumSize = new Size(700, 0),
-                    Text = $"{gameName} - Today: {FormatTime(hoursToday)} | Week: {FormatTime(hoursWeek)} | Month: {FormatTime(hoursMonth)} | Total: {FormatTime(totalHours)}"
+                    Text = $"{g.Game.Name} - Today: {FormatTime(g.TimeToday)} | Week: {FormatTime(g.TimeWeek)} | Month: {FormatTime(g.TimeMonth)} | Total: {FormatTime(g.TimeTotal)}"
                 };
 
                 var removeButton = new Button
@@ -139,12 +171,10 @@ namespace GameTimeMonitor.Views
                     Margin = new Padding(10)
                 };
 
-                removeButton.Location = new Point(group.Width - removeButton.Width - 20, 30);
-
                 removeButton.Click += (sender, args) =>
                 {
                     var result = MessageBox.Show(
-                        $"Are you sure you want to remove the game: {gameName}?",
+                        $"Are you sure you want to remove the game: {g.Game.Name}?",
                         "Confirm Removal",
                         MessageBoxButtons.YesNo,
                         MessageBoxIcon.Question
@@ -152,13 +182,29 @@ namespace GameTimeMonitor.Views
 
                     if (result == DialogResult.Yes)
                     {
-                        _gameController.RemoveGame(gameName);
+                        _gameController.RemoveGame(g.Game.Name);
                         DisplayAllGamesTime();
                     }
                 };
 
-                group.Controls.Add(label);
-                group.Controls.Add(removeButton);
+                var innerLayout = new TableLayoutPanel
+                {
+                    Dock = DockStyle.Fill,
+                    AutoSize = true,
+                    ColumnCount = 1,
+                    RowCount = 2
+                };
+
+                innerLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                innerLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+                label.Margin = new Padding(0, 0, 0, 10); // espaçamento inferior
+                removeButton.Anchor = AnchorStyles.Right; // ou AnchorStyles.None para centralizar
+
+                innerLayout.Controls.Add(label, 0, 0);
+                innerLayout.Controls.Add(removeButton, 0, 1);
+
+                group.Controls.Add(innerLayout);
                 flowLayoutPanelGames.Controls.Add(group);
             }
         }
