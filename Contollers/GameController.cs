@@ -1,6 +1,7 @@
 using GameTimeMonitor.Models;
 using GameTimeMonitor.Services;
 using Newtonsoft.Json;
+using System.IO;
 
 namespace GameTimeMonitor.Controllers
 {
@@ -8,6 +9,7 @@ namespace GameTimeMonitor.Controllers
     {
         private List<Game> _games;
         private readonly DatabaseService _databaseService;
+        private readonly string _gamesFilePath = "Database/games.json";
 
         // Constructor to initialize GameController with DatabaseService
         public GameController(DatabaseService databaseService)
@@ -21,13 +23,23 @@ namespace GameTimeMonitor.Controllers
         {
             try
             {
-                string json = File.ReadAllText("Database/games.json");
-                _games = JsonConvert.DeserializeObject<List<Game>>(json) ?? new List<Game>();
+                if (File.Exists(_gamesFilePath))
+                {
+                    // Read the existing file
+                    string json = File.ReadAllText(_gamesFilePath);
+                    _games = JsonConvert.DeserializeObject<List<Game>>(json) ?? new List<Game>();
+                }
+                else
+                {
+                    // If the file does not exist, create a new file with an empty list
+                    File.WriteAllText(_gamesFilePath, JsonConvert.SerializeObject(new List<Game>(), Formatting.Indented));
+                    _games = new List<Game>(); // Initialize as an empty list
+                }
             }
-            catch
+            catch (Exception ex)
             {
                 _games = new List<Game>();
-                MessageBox.Show("Error loading Database/games.json");
+                MessageBox.Show($"Error loading Database/games.json: {ex.Message}");
             }
         }
 
@@ -35,14 +47,14 @@ namespace GameTimeMonitor.Controllers
         public void AddGame(Game game)
         {
             _games.Add(game);
-            File.WriteAllText("Database/games.json", JsonConvert.SerializeObject(_games, Formatting.Indented));
+            SaveGamesToFile();
         }
 
         // Removes a game by name from the list and updates the JSON file
         public void RemoveGame(string gameName)
         {
             _games.RemoveAll(game => game.Name == gameName);
-            File.WriteAllText("Database/games.json", JsonConvert.SerializeObject(_games, Formatting.Indented));
+            SaveGamesToFile();
         }
 
         // Updates an existing game's information in the list and updates the JSON file
@@ -53,7 +65,20 @@ namespace GameTimeMonitor.Controllers
             {
                 _games[index] = newGame;
             }
-            File.WriteAllText("Database/games.json", JsonConvert.SerializeObject(_games, Formatting.Indented));
+            SaveGamesToFile();
+        }
+
+        // Helper method to save games to the JSON file
+        private void SaveGamesToFile()
+        {
+            try
+            {
+                File.WriteAllText(_gamesFilePath, JsonConvert.SerializeObject(_games, Formatting.Indented));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error saving Database/games.json: {ex.Message}");
+            }
         }
 
         // Returns the list of games

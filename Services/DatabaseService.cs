@@ -1,11 +1,24 @@
 using GameTimeMonitor.Models;
 using Microsoft.Data.Sqlite;
+using System.IO;
 
 namespace GameTimeMonitor.Services
 {
     public class DatabaseService
     {
-        private string dbFilePath = "playtime.db";
+        private readonly string dbFilePath;
+
+        public DatabaseService()
+        {
+            string appDataPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "GameTimeMonitor"
+            );
+
+            Directory.CreateDirectory(appDataPath);
+
+            dbFilePath = Path.Combine(appDataPath, "playtime.db");
+        }
 
         public void InitializeDatabase()
         {
