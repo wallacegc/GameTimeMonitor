@@ -74,6 +74,26 @@ namespace GameTimeMonitor.Views
 
             toolStrip.Items.Add(updateButton);
 
+            // Button to remove duplicate records
+            ToolStripButton removeDuplicatesButton = new ToolStripButton("Remove Duplicates");
+            removeDuplicatesButton.Click += (sender, e) =>
+            {
+                try
+                {
+                    var duplicateService = new DuplicateCheckService();
+                    int removedCount = duplicateService.RemoveDuplicateSessions();
+
+                    _gameController.LoadGames();
+                    DisplayAllGamesTime();
+                    MessageBox.Show($"{removedCount} duplicate sessions removed.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error while removing duplicates: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+            toolStrip.Items.Add(removeDuplicatesButton);
+
             this.Controls.Add(toolStrip);
         }
 
