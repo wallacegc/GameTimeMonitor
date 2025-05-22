@@ -64,8 +64,11 @@ namespace GameTimeMonitor.Controllers
             if (index >= 0)
             {
                 _games[index] = newGame;
+
+                _databaseService.UpdateGameNameInDatabase(oldGame.Name, newGame.Name);
+
+                SaveGamesToFile();
             }
-            SaveGamesToFile();
         }
 
         // Helper method to save games to the JSON file

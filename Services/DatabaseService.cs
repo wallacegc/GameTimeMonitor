@@ -79,5 +79,47 @@ namespace GameTimeMonitor.Services
             var result = cmd.ExecuteScalar();
             return result != DBNull.Value ? Convert.ToDouble(result) : 0;
         }
+
+        public List<GameSession> GetSessionsForGame(string gameName)
+        {
+            var sessions = new List<GameSession>();
+
+            using var connection = new SqliteConnection($"Data Source={dbFilePath}");
+            connection.Open();
+
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+        SELECT start_time, end_time
+        FROM sessions
+        WHERE game_name = $game AND end_time IS NOT NULL
+    ";
+            cmd.Parameters.AddWithValue("$game", gameName);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var start = reader.GetDateTime(0);
+                var end = reader.GetDateTime(1);
+                sessions.Add(new GameSession { StartTime = start, EndTime = end });
+            }
+
+            return sessions;
+        }
+        public void UpdateGameNameInDatabase(string oldName, string newName)
+        {
+            using var connection = new SqliteConnection($"Data Source={dbFilePath}");
+            connection.Open();
+
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+            UPDATE sessions
+            SET game_name = $newName
+            WHERE game_name = $oldName;
+        ";
+            cmd.Parameters.AddWithValue("$newName", newName);
+            cmd.Parameters.AddWithValue("$oldName", oldName);
+
+            cmd.ExecuteNonQuery();
+        }
     }
 }
