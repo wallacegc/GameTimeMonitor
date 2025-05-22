@@ -26,15 +26,15 @@ namespace GameTimeMonitor.Services
             using var connection = new SqliteConnection($"Data Source={dbFilePath}");
             connection.Open();
 
-            // Get all sessions ordered by game and time
+            // Get all sessions ordered by game and start time
             var sessions = new List<SessionRecord>();
 
             var selectCmd = connection.CreateCommand();
             selectCmd.CommandText = @"
-                SELECT id, game_name, start_time, end_time
-                FROM sessions
-                ORDER BY game_name, start_time, end_time;
-            ";
+        SELECT id, game_name, start_time, end_time
+        FROM sessions
+        ORDER BY game_name, start_time;
+    ";
 
             using (var reader = selectCmd.ExecuteReader())
             {
@@ -50,11 +50,25 @@ namespace GameTimeMonitor.Services
                 }
             }
 
-            var idsToRemove = new List<long>();
+            var idsToRemove = new HashSet<long>();
             var seenSessions = new List<SessionRecord>();
 
+            // Remove sessions with duration less than 1 minute
+            foreach (var session in sessions)
+            {
+                var duration = (session.EndTime - session.StartTime).TotalMinutes;
+                if (duration < 1)
+                {
+                    idsToRemove.Add(session.Id);
+                }
+            }
+
+            // Remove exact duplicates with time tolerance
             foreach (var current in sessions)
             {
+                // Skip sessions already marked for removal
+                if (idsToRemove.Contains(current.Id)) continue;
+
                 bool isDuplicate = false;
 
                 foreach (var seen in seenSessions)
@@ -78,7 +92,52 @@ namespace GameTimeMonitor.Services
                 }
             }
 
-            // Delete duplicates
+            // Remove overlapping sessions (partial or full overlap)
+            var groupedByGame = sessions.GroupBy(s => s.GameName);
+
+            foreach (var group in groupedByGame)
+            {
+                var sortedSessions = group.OrderBy(s => s.StartTime).ToList();
+
+                for (int i = 0; i < sortedSessions.Count - 1; i++)
+                {
+                    var current = sortedSessions[i];
+                    var next = sortedSessions[i + 1];
+
+                    // Skip sessions already marked for removal
+                    if (idsToRemove.Contains(current.Id) || idsToRemove.Contains(next.Id))
+                        continue;
+
+                    // Check for overlap
+                    if (current.EndTime >= next.StartTime)
+                    {
+                        if (current.EndTime >= next.EndTime)
+                        {
+                            // Next session is fully contained within the current session
+                            idsToRemove.Add(next.Id);
+                        }
+                        else
+                        {
+                            // Partial overlap
+                            var overlapDuration = (current.EndTime - next.StartTime).TotalMinutes;
+
+                            if (overlapDuration >= 1) // minimum overlap threshold
+                            {
+                                var currentDuration = (current.EndTime - current.StartTime).TotalMinutes;
+                                var nextDuration = (next.EndTime - next.StartTime).TotalMinutes;
+
+                                // Remove shorter session
+                                if (nextDuration < currentDuration)
+                                    idsToRemove.Add(next.Id);
+                                else
+                                    idsToRemove.Add(current.Id);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Delete all marked sessions
             int deleted = 0;
             foreach (var id in idsToRemove)
             {
@@ -95,6 +154,8 @@ namespace GameTimeMonitor.Services
         {
             return Math.Abs((t1 - t2).TotalSeconds) <= toleranceSeconds;
         }
+
+
 
         private class SessionRecord
         {

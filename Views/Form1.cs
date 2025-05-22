@@ -168,6 +168,30 @@ namespace GameTimeMonitor.Views
                     }
                 }
 
+                var sessions = _databaseService.GetSessionsForGame(g.Game.Name);
+
+                TimeSpan longestSession = TimeSpan.Zero;
+                DateTime longestSessionDate = DateTime.MinValue;
+
+                Dictionary<DateTime, double> hoursPerDay = new();
+
+                foreach (var session in sessions)
+                {
+                    var duration = session.EndTime - session.StartTime;
+
+                    if (duration > longestSession)
+                    {
+                        longestSession = duration;
+                        longestSessionDate = session.StartTime.Date;
+                    }
+
+                    var day = session.StartTime.Date;
+                    if (!hoursPerDay.ContainsKey(day)) hoursPerDay[day] = 0;
+                    hoursPerDay[day] += duration.TotalMinutes;
+                }
+
+                var maxDay = hoursPerDay.OrderByDescending(d => d.Value).FirstOrDefault();
+
                 var group = new GroupBox
                 {
                     Text = g.Game.Name,
@@ -181,30 +205,10 @@ namespace GameTimeMonitor.Views
                 {
                     AutoSize = true,
                     MaximumSize = new Size(700, 0),
-                    Text = $"{g.Game.Name} - Today: {FormatTime(g.TimeToday)} | Week: {FormatTime(g.TimeWeek)} | Month: {FormatTime(g.TimeMonth)} | Total: {FormatTime(g.TimeTotal)}"
-                };
-
-                var removeButton = new Button
-                {
-                    Text = "Remove",
-                    AutoSize = true,
-                    Margin = new Padding(10)
-                };
-
-                removeButton.Click += (sender, args) =>
-                {
-                    var result = MessageBox.Show(
-                        $"Are you sure you want to remove the game: {g.Game.Name}?",
-                        "Confirm Removal",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question
-                    );
-
-                    if (result == DialogResult.Yes)
-                    {
-                        _gameController.RemoveGame(g.Game.Name);
-                        DisplayAllGamesTime();
-                    }
+                    Text =
+                        $"Today: {FormatTime(g.TimeToday)} | Week: {FormatTime(g.TimeWeek)} | Month: {FormatTime(g.TimeMonth)} | Total: {FormatTime(g.TimeTotal)}\n" +
+                        $"🏆 Longest Session: {FormatTime(longestSession.TotalMinutes)} on {longestSessionDate:dd/MM/yyyy}\n" +
+                        $"📆 Most Played Day: {maxDay.Key.ToShortDateString()} - {FormatTime(maxDay.Value)}"
                 };
 
                 var innerLayout = new TableLayoutPanel
@@ -212,17 +216,18 @@ namespace GameTimeMonitor.Views
                     Dock = DockStyle.Fill,
                     AutoSize = true,
                     ColumnCount = 1,
-                    RowCount = 2
+                    RowCount = 1
                 };
 
                 innerLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
                 innerLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
                 label.Margin = new Padding(0, 0, 0, 10); // espaçamento inferior
-                removeButton.Anchor = AnchorStyles.Right; // ou AnchorStyles.None para centralizar
 
                 innerLayout.Controls.Add(label, 0, 0);
-                innerLayout.Controls.Add(removeButton, 0, 1);
+
+                group.Click += (sender, e) => ShowGameDetails(g.Game);
+                label.Click += (sender, e) => ShowGameDetails(g.Game);
 
                 group.Controls.Add(innerLayout);
                 flowLayoutPanelGames.Controls.Add(group);
@@ -251,6 +256,15 @@ namespace GameTimeMonitor.Views
             {
                 labelStatus.Text = message;
             }
+        }
+
+        private void ShowGameDetails(Game game)
+        {
+            var historyForm = new GameHistoryForm(game, _databaseService, _gameController);
+            historyForm.ShowDialog();
+
+            // Atualiza a tela após edição/remoção
+            DisplayAllGamesTime();
         }
     }
 }

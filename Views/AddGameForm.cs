@@ -20,6 +20,7 @@ namespace GameTimeMonitor.Views
         private void BtnSave_Click(object sender, EventArgs e)
         {
             GameName = txtGameName.Text;
+            GameProcess = txtGamePath.Text;
 
             if (string.IsNullOrEmpty(GameName) || string.IsNullOrEmpty(GameProcess))
             {
