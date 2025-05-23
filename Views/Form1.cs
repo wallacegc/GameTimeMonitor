@@ -204,12 +204,30 @@ namespace GameTimeMonitor.Views
                 var label = new Label
                 {
                     AutoSize = true,
-                    MaximumSize = new Size(700, 0),
-                    Text =
-                        $"Today: {FormatTime(g.TimeToday)} | Week: {FormatTime(g.TimeWeek)} | Month: {FormatTime(g.TimeMonth)} | Total: {FormatTime(g.TimeTotal)}\n" +
-                        $"🏆 Longest Session: {FormatTime(longestSession.TotalMinutes)} on {longestSessionDate:dd/MM/yyyy}\n" +
-                        $"📆 Most Played Day: {maxDay.Key.ToShortDateString()} - {FormatTime(maxDay.Value)}"
+                    MaximumSize = new Size(700, 0)
                 };
+
+                // Texto base para exibir os tempos
+                string baseText =
+                    $"Today: {FormatTime(g.TimeToday)} | Week: {FormatTime(g.TimeWeek)} | Month: {FormatTime(g.TimeMonth)} | Total: {FormatTime(g.TimeTotal)}\n" +
+                    $"🏆 Longest Session: {FormatTime(longestSession.TotalMinutes)} on {longestSessionDate:dd/MM/yyyy}\n" +
+                    $"📆 Most Played Day: {maxDay.Key.ToShortDateString()} - {FormatTime(maxDay.Value)}";
+
+                if (g.Game.Process == "no_process")
+                {
+                    // Seta o nome do grupo em vermelho
+                    group.ForeColor = Color.Red;
+
+                    // Adiciona aviso e pinta o texto do label em vermelho
+                    label.Text = baseText + "\n⚠️ Please update the game process/path!";
+                    label.ForeColor = Color.Red;
+                }
+                else
+                {
+                    group.ForeColor = SystemColors.ControlText;
+                    label.Text = baseText;
+                    label.ForeColor = SystemColors.ControlText;
+                }
 
                 var innerLayout = new TableLayoutPanel
                 {

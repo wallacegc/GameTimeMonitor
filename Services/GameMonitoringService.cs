@@ -53,6 +53,25 @@ namespace GameTimeMonitor.Services
                         gameStartTimes[game.Name] = DateTime.Now;
                         GameStatusChanged?.Invoke(game.Name, "Running");
                     }
+                    else
+                    {
+                        TimeSpan elapsed = DateTime.Now - gameStartTimes[game.Name];
+                        int totalMinutes = (int)elapsed.TotalMinutes;
+
+                        string timeText;
+                        if (totalMinutes < 60)
+                        {
+                            timeText = $"{totalMinutes} min";
+                        }
+                        else
+                        {
+                            int hours = totalMinutes / 60;
+                            int minutes = totalMinutes % 60;
+                            timeText = $"{hours}:{minutes:D2} h";
+                        }
+
+                        GameStatusChanged?.Invoke(game.Name, $"Running - {timeText}");
+                    }
                 }
                 else if (gameStartTimes.ContainsKey(game.Name))
                 {

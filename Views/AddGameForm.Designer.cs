@@ -9,7 +9,7 @@ namespace GameTimeMonitor.Views
         private System.Windows.Forms.TextBox txtGamePath;
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.Button btnCancel;
-        private System.Windows.Forms.Button btnSelectGamePath;  // Novo botão para selecionar o arquivo
+        private System.Windows.Forms.Button btnSelectGamePath;  // New button to select the file
 
         protected override void Dispose(bool disposing)
         {
@@ -35,7 +35,7 @@ namespace GameTimeMonitor.Views
             labelGameName.Name = "labelGameName";
             labelGameName.Size = new Size(132, 25);
             labelGameName.TabIndex = 0;
-            labelGameName.Text = "Nome do Jogo";
+            labelGameName.Text = "Game Name";
             // 
             // labelGamePath
             // 
@@ -44,7 +44,7 @@ namespace GameTimeMonitor.Views
             labelGamePath.Name = "labelGamePath";
             labelGamePath.Size = new Size(154, 25);
             labelGamePath.TabIndex = 2;
-            labelGamePath.Text = "Caminho do Jogo";
+            labelGamePath.Text = "Game Path";
             // 
             // txtGameName
             // 
@@ -67,7 +67,7 @@ namespace GameTimeMonitor.Views
             btnSave.Name = "btnSave";
             btnSave.Size = new Size(75, 37);
             btnSave.TabIndex = 4;
-            btnSave.Text = "Salvar";
+            btnSave.Text = "Save";
             btnSave.UseVisualStyleBackColor = true;
             btnSave.Click += BtnSave_Click;
             // 
@@ -77,7 +77,7 @@ namespace GameTimeMonitor.Views
             btnCancel.Name = "btnCancel";
             btnCancel.Size = new Size(75, 37);
             btnCancel.TabIndex = 5;
-            btnCancel.Text = "Cancelar";
+            btnCancel.Text = "Cancel";
             btnCancel.UseVisualStyleBackColor = true;
             btnCancel.Click += BtnCancel_Click;
             // 
@@ -87,7 +87,7 @@ namespace GameTimeMonitor.Views
             btnSelectGamePath.Name = "btnSelectGamePath";
             btnSelectGamePath.Size = new Size(110, 33);
             btnSelectGamePath.TabIndex = 6;
-            btnSelectGamePath.Text = "Selecionar";
+            btnSelectGamePath.Text = "Select";
             btnSelectGamePath.UseVisualStyleBackColor = true;
             btnSelectGamePath.Click += BtnSelectGamePath_Click;
             // 
@@ -102,7 +102,7 @@ namespace GameTimeMonitor.Views
             Controls.Add(txtGameName);
             Controls.Add(labelGameName);
             Name = "AddGameForm";
-            Text = "Adicionar Jogo";
+            Text = "Add Game";
             ResumeLayout(false);
             PerformLayout();
         }

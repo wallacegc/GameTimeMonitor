@@ -9,13 +9,18 @@ namespace GameTimeMonitor.Services
 {
     internal class BackupService
     {
-        private readonly string _databasePath = "playtime.db";
+        private readonly string _databasePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "GameTimeMonitor",
+            "playtime.db"
+        );
+
         private readonly string _gamesJsonPath = Path.Combine("Database", "games.json");
 
         public void UpdateGamesJson()
         {
             if (!File.Exists(_databasePath))
-                throw new FileNotFoundException("Database file 'playtime.db' not found.");
+                throw new FileNotFoundException("Database file 'playtime.db' not found at expected path: " + _databasePath);
 
             using var connection = new SqliteConnection($"Data Source={_databasePath}");
             connection.Open();

@@ -10,17 +10,18 @@ namespace GameTimeMonitor.Views
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string GameProcess { get; private set; }
 
-        // Constructor to initialize the AddGameForm
+        // Guarda o nome do processo (executável) sem extensão
+        private string selectedProcessName = string.Empty;
+
         public AddGameForm()
         {
             InitializeComponent();
         }
 
-        // Event handler for the save button click
         private void BtnSave_Click(object sender, EventArgs e)
         {
             GameName = txtGameName.Text;
-            GameProcess = txtGamePath.Text;
+            GameProcess = selectedProcessName;  // salva somente o nome do executável sem extensão
 
             if (string.IsNullOrEmpty(GameName) || string.IsNullOrEmpty(GameProcess))
             {
@@ -33,14 +34,12 @@ namespace GameTimeMonitor.Views
             }
         }
 
-        // Event handler for the cancel button click
         private void BtnCancel_Click(object sender, EventArgs e)
         {
             this.DialogResult = DialogResult.Cancel;
             this.Close();
         }
 
-        // Function to open the OpenFileDialog and select the game's executable file
         private void BtnSelectGamePath_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
@@ -50,12 +49,11 @@ namespace GameTimeMonitor.Views
 
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
-                    // Extract the file name without the extension
-                    string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(openFileDialog.FileName);
+                    // Nome do executável sem extensão
+                    selectedProcessName = Path.GetFileNameWithoutExtension(openFileDialog.FileName);
 
-                    // Fill in the path field with the full path, but save only the file name
+                    // Mostra o caminho completo no TextBox, só pra referência visual
                     txtGamePath.Text = openFileDialog.FileName;
-                    GameProcess = fileNameWithoutExtension; // Save only the file name without the extension
                 }
             }
         }
