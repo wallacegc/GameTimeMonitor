@@ -89,10 +89,11 @@ namespace GameTimeMonitor.Services
 
             var cmd = connection.CreateCommand();
             cmd.CommandText = @"
-        SELECT start_time, end_time
-        FROM sessions
-        WHERE game_name = $game AND end_time IS NOT NULL
-    ";
+                    SELECT start_time, end_time
+                    FROM sessions
+                    WHERE game_name = $game AND end_time IS NOT NULL
+                    ORDER BY end_time DESC
+                ";
             cmd.Parameters.AddWithValue("$game", gameName);
 
             using var reader = cmd.ExecuteReader();
