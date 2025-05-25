@@ -136,7 +136,7 @@ namespace GameTimeMonitor.Views
             flowLayoutPanelGames.Controls.Clear();
 
             var today = DateTime.Today;
-            var startWeek = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Monday); // começa na segunda
+            var startWeek = today.AddDays(-((int)today.DayOfWeek == 0 ? 6 : (int)today.DayOfWeek - 1));
             var startMonth = new DateTime(today.Year, today.Month, 1);
 
             var gamesWithTimes = _gameController.GetGames()
