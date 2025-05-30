@@ -35,7 +35,6 @@ namespace GameTimeMonitor.Services
                 }
                 catch (Exception ex)
                 {
-                    // Catch any exceptions that may occur in the thread
                     MessageBox.Show($"Error in game monitoring: {ex.Message}");
                 }
             }).Start();
@@ -87,6 +86,10 @@ namespace GameTimeMonitor.Services
                         EndTime = end,
                         DurationMinutes = duration.TotalMinutes
                     });
+
+                    // Remove duplicate sessions after the game ends
+                    var duplicateService = new DuplicateCheckService();
+                    duplicateService.RemoveDuplicateSessions();
 
                     gameStartTimes.Remove(game.Name);
                     GameUpdated?.Invoke();

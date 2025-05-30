@@ -215,10 +215,9 @@ namespace GameTimeMonitor.Views
 
                 if (g.Game.Process == "no_process")
                 {
-                    // Seta o nome do grupo em vermelho
+                    group.Text += "  ⚠️";
                     group.ForeColor = Color.Red;
 
-                    // Adiciona aviso e pinta o texto do label em vermelho
                     label.Text = baseText + "\n⚠️ Please update the game process/path!";
                     label.ForeColor = Color.Red;
                 }
