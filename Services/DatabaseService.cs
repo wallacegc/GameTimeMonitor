@@ -1,5 +1,7 @@
 using GameTimeMonitor.Models;
 using Microsoft.Data.Sqlite;
+using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace GameTimeMonitor.Services
@@ -8,6 +10,7 @@ namespace GameTimeMonitor.Services
     {
         private readonly string dbFilePath;
 
+        // Constructor initializes the database file path inside AppData/GameTimeMonitor
         public DatabaseService()
         {
             string appDataPath = Path.Combine(
@@ -20,6 +23,7 @@ namespace GameTimeMonitor.Services
             dbFilePath = Path.Combine(appDataPath, "playtime.db");
         }
 
+        // Creates the sessions table if the database file doesn't exist yet
         public void InitializeDatabase()
         {
             if (!File.Exists(dbFilePath))
@@ -41,6 +45,7 @@ namespace GameTimeMonitor.Services
             }
         }
 
+        // Inserts a new game session record into the database
         public void SaveSessionToDatabase(Session session)
         {
             using var connection = new SqliteConnection($"Data Source={dbFilePath}");
@@ -59,6 +64,7 @@ namespace GameTimeMonitor.Services
             cmd.ExecuteNonQuery();
         }
 
+        // Retrieves total game time in minutes for a game between two dates
         public double GetGameTime(string game, DateTime from, DateTime to)
         {
             using var connection = new SqliteConnection($"Data Source={dbFilePath}");
@@ -80,6 +86,7 @@ namespace GameTimeMonitor.Services
             return result != DBNull.Value ? Convert.ToDouble(result) : 0;
         }
 
+        // Returns a list of game sessions for the specified game ordered by most recent end time
         public List<GameSession> GetSessionsForGame(string gameName)
         {
             var sessions = new List<GameSession>();
@@ -89,11 +96,11 @@ namespace GameTimeMonitor.Services
 
             var cmd = connection.CreateCommand();
             cmd.CommandText = @"
-                    SELECT start_time, end_time
-                    FROM sessions
-                    WHERE game_name = $game AND end_time IS NOT NULL
-                    ORDER BY end_time DESC
-                ";
+                SELECT start_time, end_time
+                FROM sessions
+                WHERE game_name = $game AND end_time IS NOT NULL
+                ORDER BY end_time DESC
+            ";
             cmd.Parameters.AddWithValue("$game", gameName);
 
             using var reader = cmd.ExecuteReader();
@@ -106,6 +113,8 @@ namespace GameTimeMonitor.Services
 
             return sessions;
         }
+
+        // Updates all session records in the database changing old game name to new game name
         public void UpdateGameNameInDatabase(string oldName, string newName)
         {
             using var connection = new SqliteConnection($"Data Source={dbFilePath}");
@@ -113,10 +122,10 @@ namespace GameTimeMonitor.Services
 
             var cmd = connection.CreateCommand();
             cmd.CommandText = @"
-            UPDATE sessions
-            SET game_name = $newName
-            WHERE game_name = $oldName;
-        ";
+                UPDATE sessions
+                SET game_name = $newName
+                WHERE game_name = $oldName;
+            ";
             cmd.Parameters.AddWithValue("$newName", newName);
             cmd.Parameters.AddWithValue("$oldName", oldName);
 

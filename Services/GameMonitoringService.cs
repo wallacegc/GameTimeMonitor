@@ -92,8 +92,21 @@ namespace GameTimeMonitor.Services
                     duplicateService.RemoveDuplicateSessions();
 
                     gameStartTimes.Remove(game.Name);
+
+                    string formattedDuration;
+                    if (duration.TotalMinutes >= 60)
+                    {
+                        int hours = (int)duration.TotalHours;
+                        int minutes = duration.Minutes;
+                        formattedDuration = $"{hours}:{minutes:D2} Hr";
+                    }
+                    else
+                    {
+                        formattedDuration = $"{Math.Round(duration.TotalMinutes)} min";
+                    }
+
                     GameUpdated?.Invoke();
-                    GameStatusChanged?.Invoke(game.Name, $"Stopped - Duration: {Math.Round(duration.TotalMinutes)} min");
+                    GameStatusChanged?.Invoke(game.Name, $"Stopped - Duration: {formattedDuration}");
                 }
             }
         }

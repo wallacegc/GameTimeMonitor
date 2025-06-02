@@ -3,6 +3,8 @@ using GameTimeMonitor.Models;
 using GameTimeMonitor.Services;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
+using System.Drawing;
+using System.Windows.Forms;
 
 namespace GameTimeMonitor.Views
 {
@@ -17,122 +19,94 @@ namespace GameTimeMonitor.Views
             _databaseService = new DatabaseService();
             _gameController = new GameController(_databaseService);
             _gameMonitoringService = new GameMonitoringService(_databaseService);
+
             InitializeComponent();
-
-            // Initializing the toolbar and connecting the event handlers
             InitializeToolStrip();
-            this.Load += Form1_Load;
+            Load += Form1_Load;
 
-            _databaseService.InitializeDatabase();
-            _gameController.LoadGames();
-            _gameMonitoringService.StartMonitoring(_gameController.GetGames());
-
-            // Event handlers for game status and game updates
             _gameMonitoringService.GameStatusChanged += UpdateStatus;
             _gameMonitoringService.GameUpdated += () =>
             {
                 if (InvokeRequired)
-                {
-                    Invoke(() => DisplayAllGamesTime());
-                }
+                    Invoke(DisplayAllGamesTime);
                 else
-                {
                     DisplayAllGamesTime();
-                }
             };
         }
 
-        // Initializes the ToolStrip and adds the "Add Game", "Backup" and "Restore" buttons
+        // Loads the database and game information when the form loads
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            _databaseService.InitializeDatabase();
+            _gameController.LoadGames();
+            _gameMonitoringService.StartMonitoring(_gameController.GetGames());
+            DisplayAllGamesTime();
+        }
+
+        // Initializes the toolbar with buttons for Add Game, Update, and Remove Duplicates
         private void InitializeToolStrip()
         {
             ToolStrip toolStrip = new ToolStrip();
 
-            // Botão de adicionar jogo
             ToolStripButton addGameButton = new ToolStripButton("Add Game");
             addGameButton.Click += AddGameButton_Click;
             toolStrip.Items.Add(addGameButton);
 
-            // Botão para atualizar o arquivo games.json
             ToolStripButton updateButton = new ToolStripButton("Update");
-            updateButton.Click += (sender, e) =>
+            updateButton.Click += (s, e) =>
             {
                 try
                 {
-                    var backupService = new BackupService();
-                    backupService.UpdateGamesJson();
-
+                    new BackupService().UpdateGamesJson();
                     _gameController.LoadGames();
                     DisplayAllGamesTime();
-
-                    MessageBox.Show("games.json successfully updated!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("games.json successfully updated!", "Success");
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error updating games.json: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Error updating: {ex.Message}", "Error");
                 }
             };
-
             toolStrip.Items.Add(updateButton);
 
-            // Button to remove duplicate records
             ToolStripButton removeDuplicatesButton = new ToolStripButton("Remove Duplicates");
-            removeDuplicatesButton.Click += (sender, e) =>
+            removeDuplicatesButton.Click += (s, e) =>
             {
                 try
                 {
-                    var duplicateService = new DuplicateCheckService();
-                    int removedCount = duplicateService.RemoveDuplicateSessions();
-
+                    int count = new DuplicateCheckService().RemoveDuplicateSessions();
                     _gameController.LoadGames();
                     DisplayAllGamesTime();
-                    MessageBox.Show($"{removedCount} duplicate sessions removed.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show($"{count} duplicate sessions removed.", "Success");
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error while removing duplicates: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Error removing duplicates: {ex.Message}", "Error");
                 }
             };
             toolStrip.Items.Add(removeDuplicatesButton);
 
-            this.Controls.Add(toolStrip);
+            toolStrip.Dock = DockStyle.Top;
+            Controls.Add(toolStrip);
         }
 
-        // Event handler for the "Add Game" button click
+        // Handles the Add Game button click to show a form and add a new game
         private void AddGameButton_Click(object sender, EventArgs e)
         {
-            using (var addGameForm = new AddGameForm())
+            using var addGameForm = new AddGameForm();
+            if (addGameForm.ShowDialog() == DialogResult.OK)
             {
-                var result = addGameForm.ShowDialog();
-
-                if (result == DialogResult.OK)
-                {
-                    string gameName = addGameForm.GameName;
-                    string gameProcess = addGameForm.GameProcess;
-
-                    var newGame = new Game
-                    {
-                        Name = gameName,
-                        Process = gameProcess
-                    };
-
-                    _gameController.AddGame(newGame);
-                    DisplayAllGamesTime();
-
-                    MessageBox.Show("Game added successfully!");
-                }
+                var newGame = new Game { Name = addGameForm.GameName, Process = addGameForm.GameProcess };
+                _gameController.AddGame(newGame);
+                DisplayAllGamesTime();
+                MessageBox.Show("Game successfully added!");
             }
         }
 
-        // Called when the form is loaded, loading and displaying games
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            _gameController.LoadGames();
-            DisplayAllGamesTime();
-        }
-
-        // Displays all the games and their play time on the FlowLayoutPanel
+        // Displays all games and their playtime metrics in the UI
         private void DisplayAllGamesTime()
         {
+            flowLayoutPanelGames.SuspendLayout();
             flowLayoutPanelGames.Controls.Clear();
 
             var today = DateTime.Today;
@@ -148,43 +122,24 @@ namespace GameTimeMonitor.Views
                     TimeMonth = _databaseService.GetGameTime(game.Name, startMonth, DateTime.Now),
                     TimeTotal = _databaseService.GetGameTime(game.Name, DateTime.MinValue, DateTime.Now)
                 })
-                .OrderByDescending(g => g.TimeTotal) // ordena pelo tempo total decrescente
+                .OrderByDescending(g => g.TimeTotal)
                 .ToList();
 
             foreach (var g in gamesWithTimes)
             {
-                string FormatTime(double timeInMinutes)
-                {
-                    if (timeInMinutes < 60)
-                    {
-                        int roundedMinutes = (int)Math.Round(timeInMinutes);
-                        return $"{roundedMinutes} min";
-                    }
-                    else
-                    {
-                        int hours = (int)(timeInMinutes / 60);
-                        int minutes = (int)(timeInMinutes % 60);
-                        return $"{hours}:{minutes:D2} h";
-                    }
-                }
-
                 var sessions = _databaseService.GetSessionsForGame(g.Game.Name);
-
                 TimeSpan longestSession = TimeSpan.Zero;
                 DateTime longestSessionDate = DateTime.MinValue;
-
                 Dictionary<DateTime, double> hoursPerDay = new();
 
                 foreach (var session in sessions)
                 {
                     var duration = session.EndTime - session.StartTime;
-
                     if (duration > longestSession)
                     {
                         longestSession = duration;
                         longestSessionDate = session.StartTime.Date;
                     }
-
                     var day = session.StartTime.Date;
                     if (!hoursPerDay.ContainsKey(day)) hoursPerDay[day] = 0;
                     hoursPerDay[day] += duration.TotalMinutes;
@@ -194,94 +149,73 @@ namespace GameTimeMonitor.Views
 
                 var group = new GroupBox
                 {
-                    Text = g.Game.Name,
+                    Text = g.Game.Name + (g.Game.Process == "no_process" ? " ⚠️ (Missing Process)" : ""),
+                    ForeColor = g.Game.Process == "no_process" ? Color.FromArgb(200, 0, 0) : SystemColors.ControlText,
                     Width = 740,
                     AutoSize = true,
-                    Padding = new Padding(10),
-                    AutoSizeMode = AutoSizeMode.GrowAndShrink
+                    Padding = new Padding(10)
                 };
 
                 var label = new Label
                 {
                     AutoSize = true,
-                    MaximumSize = new Size(700, 0)
+                    MaximumSize = new Size(700, 0),
+                    Margin = new Padding(0, 0, 0, 10),
+                    ForeColor = g.Game.Process == "no_process" ? Color.FromArgb(200, 0, 0) : SystemColors.ControlText,
+                    Text =
+                        $"Today: {FormatTime(g.TimeToday)} | Week: {FormatTime(g.TimeWeek)} | Month: {FormatTime(g.TimeMonth)} | Total: {FormatTime(g.TimeTotal)}\n" +
+                        $"🏆 Longest Session: {FormatTime(longestSession.TotalMinutes)} on {longestSessionDate:MM/dd/yyyy}\n" +
+                        $"📆 Most Played Day: {maxDay.Key.ToShortDateString()} - {FormatTime(maxDay.Value)}" +
+                        (g.Game.Process == "no_process" ? "\n⚠️ Please update the game process/path!" : "")
                 };
-
-                // Texto base para exibir os tempos
-                string baseText =
-                    $"Today: {FormatTime(g.TimeToday)} | Week: {FormatTime(g.TimeWeek)} | Month: {FormatTime(g.TimeMonth)} | Total: {FormatTime(g.TimeTotal)}\n" +
-                    $"🏆 Longest Session: {FormatTime(longestSession.TotalMinutes)} on {longestSessionDate:dd/MM/yyyy}\n" +
-                    $"📆 Most Played Day: {maxDay.Key.ToShortDateString()} - {FormatTime(maxDay.Value)}";
-
-                if (g.Game.Process == "no_process")
-                {
-                    group.Text += "  ⚠️";
-                    group.ForeColor = Color.Red;
-
-                    label.Text = baseText + "\n⚠️ Please update the game process/path!";
-                    label.ForeColor = Color.Red;
-                }
-                else
-                {
-                    group.ForeColor = SystemColors.ControlText;
-                    label.Text = baseText;
-                    label.ForeColor = SystemColors.ControlText;
-                }
 
                 var innerLayout = new TableLayoutPanel
                 {
                     Dock = DockStyle.Fill,
                     AutoSize = true,
-                    ColumnCount = 1,
-                    RowCount = 1
+                    ColumnCount = 1
                 };
 
                 innerLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-                innerLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-                label.Margin = new Padding(0, 0, 0, 10); // espaçamento inferior
-
                 innerLayout.Controls.Add(label, 0, 0);
 
-                group.Click += (sender, e) => ShowGameDetails(g.Game);
-                label.Click += (sender, e) => ShowGameDetails(g.Game);
-
+                group.Click += (s, e) => ShowGameDetails(g.Game);
+                label.Click += (s, e) => ShowGameDetails(g.Game);
                 group.Controls.Add(innerLayout);
+
                 flowLayoutPanelGames.Controls.Add(group);
             }
+
+            flowLayoutPanelGames.ResumeLayout();
         }
 
-        // Updates the status label with the current game status
+        // Updates the status label when a game status changes
         private void UpdateStatus(string gameName, string status)
         {
-            string message;
-
-            if (status == "Running")
-            {
-                message = $"Game running: {gameName}";
-            }
-            else
-            {
-                message = $"Game: {gameName} - {status}";
-            }
-
+            string message = status == "Running" ? $"Game running: {gameName}" : $"Game: {gameName} - {status}";
             if (labelStatus.InvokeRequired)
-            {
                 labelStatus.Invoke(() => labelStatus.Text = message);
-            }
             else
-            {
                 labelStatus.Text = message;
-            }
         }
 
+        // Shows a modal with the game session history
         private void ShowGameDetails(Game game)
         {
-            var historyForm = new GameHistoryForm(game, _databaseService, _gameController);
+            using var historyForm = new GameHistoryForm(game, _databaseService, _gameController);
             historyForm.ShowDialog();
-
-            // Atualiza a tela após edição/remoção
             DisplayAllGamesTime();
+        }
+
+        // Formats time in minutes into readable string (e.g., 1:45 h or 30 min)
+        private string FormatTime(double timeInMinutes)
+        {
+            if (timeInMinutes < 60)
+                return $"{(int)Math.Round(timeInMinutes)} min";
+
+            int hours = (int)(timeInMinutes / 60);
+            int minutes = (int)(timeInMinutes % 60);
+            return $"{hours}:{minutes:D2} h";
         }
     }
 }
