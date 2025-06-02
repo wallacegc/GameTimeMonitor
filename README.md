@@ -19,8 +19,8 @@
   See detailed stats like the longest session and the most played day.
 
 - 🧹 **Data Cleanup**  
-  - Detects and removes duplicate sessions.  
-  - Deletes sessions with duration less than 1 minute.
+  - Detects and removes duplicate sessions.  OK
+  - Deletes sessions with duration less than 1 minute. OK
 
 - 💾 **Local Storage**  
   Uses `games.json` to store game info and `SQLite` for session data.
@@ -56,7 +56,7 @@ GameTimeMonitor/
 
 - [ ] Export statistics to CSV/Excel  
 - [ ] Add system tray integration  
-- [ ] Support for tagging or grouping games  
+- [X] Support for tagging or grouping games  
 - [ ] Localization (multi-language support)  
 
 ---
