@@ -1,7 +1,9 @@
 ﻿using GameTimeMonitor.Controllers;
 using GameTimeMonitor.Models;
 using GameTimeMonitor.Services;
+using System;
 using System.Linq;
+using System.Windows.Forms;
 
 namespace GameTimeMonitor.Views
 {
@@ -11,7 +13,6 @@ namespace GameTimeMonitor.Views
         private readonly DatabaseService _databaseService;
         private readonly GameController _gameController;
 
-        // Initialize form and set date filters based on first session or default
         public GameHistoryForm(Game game, DatabaseService databaseService, GameController gameController)
         {
             InitializeComponent();
@@ -25,22 +26,17 @@ namespace GameTimeMonitor.Views
 
             var sessions = _databaseService.GetSessionsForGame(_game.Name);
 
-            if (sessions.Any())
-            {
-                var firstSessionDate = sessions.Min(s => s.StartTime.Date);
-                dtpStartDate.Value = firstSessionDate;
-            }
-            else
-            {
-                dtpStartDate.Value = DateTime.Now.AddMonths(-1);
-            }
+            // Set initial filter start date to first session date or default to 1 month ago
+            dtpStartDate.Value = sessions.Any()
+                ? sessions.Min(s => s.StartTime.Date)
+                : DateTime.Now.AddMonths(-1);
 
             dtpEndDate.Value = DateTime.Now;
 
             LoadHistory(dtpStartDate.Value, dtpEndDate.Value);
         }
 
-        // Load game sessions filtered by date range and update UI labels
+        // Load and display session history with optional date filters
         private void LoadHistory(DateTime? startDate = null, DateTime? endDate = null)
         {
             var sessions = _databaseService.GetSessionsForGame(_game.Name);
@@ -66,7 +62,6 @@ namespace GameTimeMonitor.Views
                 .ToList();
 
             var mostPlayedDay = groupedByDay.OrderByDescending(g => g.TotalMinutes).FirstOrDefault();
-
             var longestSession = sessions.OrderByDescending(s => s.DurationMinutes).FirstOrDefault();
 
             lblTotalPlayTime.Text = $"Total playtime: {FormatMinutes(totalMinutes)}";
@@ -79,18 +74,16 @@ namespace GameTimeMonitor.Views
                 : "Longest session: None";
         }
 
-        // Handle date picker changes and reload filtered sessions
+        // Keep date filters valid and reload sessions on change
         private void FilterDates_ValueChanged(object sender, EventArgs e)
         {
             if (dtpEndDate.Value.Date < dtpStartDate.Value.Date)
-            {
                 dtpEndDate.Value = dtpStartDate.Value;
-            }
 
             LoadHistory(dtpStartDate.Value, dtpEndDate.Value);
         }
 
-        // Open edit form and update game data on confirmation
+        // Open game edit form and update game details if confirmed
         private void BtnEdit_Click(object sender, EventArgs e)
         {
             var form = new AddGameForm();
@@ -101,32 +94,32 @@ namespace GameTimeMonitor.Views
             {
                 var updatedGame = new Game { Name = form.GameName, Process = form.GameProcess };
                 _gameController.UpdateGame(_game, updatedGame);
+
                 MessageBox.Show("Game updated successfully.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                this.Close();
+                Close();
             }
         }
 
-        // Confirm and remove game with all related data
+        // Confirm and delete game along with all related sessions
         private void BtnRemove_Click(object sender, EventArgs e)
         {
             var confirm = MessageBox.Show($"Remove game '{_game.Name}' and all data?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
             if (confirm == DialogResult.Yes)
             {
                 _gameController.RemoveGame(_game.Name);
                 MessageBox.Show("Game removed.", "Removed", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                this.Close();
+                Close();
             }
         }
 
-        // Format minutes as "Xh Ymin" or "Ymin"
+        // Helper method to format minutes into "Xh Ymin" or "Ymin"
         private string FormatMinutes(int totalMinutes)
         {
             int hours = totalMinutes / 60;
             int minutes = totalMinutes % 60;
-            if (hours > 0)
-                return $"{hours}h {minutes}min";
-            else
-                return $"{minutes}min";
+
+            return hours > 0 ? $"{hours}h {minutes}min" : $"{minutes}min";
         }
     }
 }

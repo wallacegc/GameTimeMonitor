@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 
 namespace GameTimeMonitor.Services
 {
@@ -21,78 +22,84 @@ namespace GameTimeMonitor.Services
             dbFilePath = Path.Combine(appDataPath, "playtime.db");
         }
 
+        // Removes duplicate and overlapping sessions from the database
+        // Returns the number of deleted records
         public int RemoveDuplicateSessions()
         {
             using var connection = new SqliteConnection($"Data Source={dbFilePath}");
             connection.Open();
 
-            // Get all sessions ordered by game and start time
+            // Load all sessions ordered by game and start time
+            var sessions = LoadAllSessions(connection);
+
+            var idsToRemove = new HashSet<long>();
+
+            // Mark sessions shorter than 1 minute for removal
+            foreach (var session in sessions)
+            {
+                if ((session.EndTime - session.StartTime).TotalMinutes < 1)
+                    idsToRemove.Add(session.Id);
+            }
+
+            // Remove exact duplicates within time tolerance
+            RemoveExactDuplicates(sessions, idsToRemove);
+
+            // Remove overlapping sessions
+            RemoveOverlappingSessions(sessions, idsToRemove);
+
+            // Delete sessions marked for removal from the database
+            return DeleteSessionsByIds(connection, idsToRemove);
+        }
+
+        private List<SessionRecord> LoadAllSessions(SqliteConnection connection)
+        {
             var sessions = new List<SessionRecord>();
 
             var selectCmd = connection.CreateCommand();
             selectCmd.CommandText = @"
-        SELECT id, game_name, start_time, end_time
-        FROM sessions
-        ORDER BY game_name, start_time;
-    ";
+                SELECT id, game_name, start_time, end_time
+                FROM sessions
+                ORDER BY game_name, start_time;
+            ";
 
-            using (var reader = selectCmd.ExecuteReader())
+            using var reader = selectCmd.ExecuteReader();
+            while (reader.Read())
             {
-                while (reader.Read())
+                sessions.Add(new SessionRecord
                 {
-                    sessions.Add(new SessionRecord
-                    {
-                        Id = reader.GetInt64(0),
-                        GameName = reader.GetString(1),
-                        StartTime = DateTime.ParseExact(reader.GetString(2), "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
-                        EndTime = DateTime.ParseExact(reader.GetString(3), "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
-                    });
-                }
+                    Id = reader.GetInt64(0),
+                    GameName = reader.GetString(1),
+                    StartTime = DateTime.ParseExact(reader.GetString(2), "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                    EndTime = DateTime.ParseExact(reader.GetString(3), "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
+                });
             }
 
-            var idsToRemove = new HashSet<long>();
+            return sessions;
+        }
+
+        private void RemoveExactDuplicates(List<SessionRecord> sessions, HashSet<long> idsToRemove)
+        {
             var seenSessions = new List<SessionRecord>();
 
-            // Remove sessions with duration less than 1 minute
-            foreach (var session in sessions)
-            {
-                var duration = (session.EndTime - session.StartTime).TotalMinutes;
-                if (duration < 1)
-                {
-                    idsToRemove.Add(session.Id);
-                }
-            }
-
-            // Remove exact duplicates with time tolerance
             foreach (var current in sessions)
             {
-                // Skip sessions already marked for removal
                 if (idsToRemove.Contains(current.Id)) continue;
 
-                bool isDuplicate = false;
-
-                foreach (var seen in seenSessions)
-                {
-                    if (current.GameName == seen.GameName &&
-                        AreTimesClose(current.StartTime, seen.StartTime, timeToleranceSeconds) &&
-                        AreTimesClose(current.EndTime, seen.EndTime, timeToleranceSeconds))
-                    {
-                        isDuplicate = true;
-                        break;
-                    }
-                }
+                bool isDuplicate = seenSessions.Any(seen =>
+                    current.GameName == seen.GameName &&
+                    AreTimesClose(current.StartTime, seen.StartTime, timeToleranceSeconds) &&
+                    AreTimesClose(current.EndTime, seen.EndTime, timeToleranceSeconds)
+                );
 
                 if (isDuplicate)
-                {
                     idsToRemove.Add(current.Id);
-                }
                 else
-                {
                     seenSessions.Add(current);
-                }
             }
+        }
 
-            // Remove overlapping sessions (partial or full overlap)
+        private void RemoveOverlappingSessions(List<SessionRecord> sessions, HashSet<long> idsToRemove)
+        {
             var groupedByGame = sessions.GroupBy(s => s.GameName);
 
             foreach (var group in groupedByGame)
@@ -104,29 +111,27 @@ namespace GameTimeMonitor.Services
                     var current = sortedSessions[i];
                     var next = sortedSessions[i + 1];
 
-                    // Skip sessions already marked for removal
                     if (idsToRemove.Contains(current.Id) || idsToRemove.Contains(next.Id))
                         continue;
 
-                    // Check for overlap
+                    // Check if sessions overlap
                     if (current.EndTime >= next.StartTime)
                     {
                         if (current.EndTime >= next.EndTime)
                         {
-                            // Next session is fully contained within the current session
+                            // Next session is fully within current session, remove next
                             idsToRemove.Add(next.Id);
                         }
                         else
                         {
-                            // Partial overlap
-                            var overlapDuration = (current.EndTime - next.StartTime).TotalMinutes;
+                            // Partial overlap - remove shorter session if overlap >= 1 minute
+                            double overlapMinutes = (current.EndTime - next.StartTime).TotalMinutes;
 
-                            if (overlapDuration >= 1) // minimum overlap threshold
+                            if (overlapMinutes >= 1)
                             {
-                                var currentDuration = (current.EndTime - current.StartTime).TotalMinutes;
-                                var nextDuration = (next.EndTime - next.StartTime).TotalMinutes;
+                                double currentDuration = (current.EndTime - current.StartTime).TotalMinutes;
+                                double nextDuration = (next.EndTime - next.StartTime).TotalMinutes;
 
-                                // Remove shorter session
                                 if (nextDuration < currentDuration)
                                     idsToRemove.Add(next.Id);
                                 else
@@ -136,26 +141,25 @@ namespace GameTimeMonitor.Services
                     }
                 }
             }
+        }
 
-            // Delete all marked sessions
-            int deleted = 0;
+        private int DeleteSessionsByIds(SqliteConnection connection, HashSet<long> idsToRemove)
+        {
+            int deletedCount = 0;
             foreach (var id in idsToRemove)
             {
-                var deleteCmd = connection.CreateCommand();
+                using var deleteCmd = connection.CreateCommand();
                 deleteCmd.CommandText = "DELETE FROM sessions WHERE id = $id";
                 deleteCmd.Parameters.AddWithValue("$id", id);
-                deleted += deleteCmd.ExecuteNonQuery();
+                deletedCount += deleteCmd.ExecuteNonQuery();
             }
-
-            return deleted;
+            return deletedCount;
         }
 
         private bool AreTimesClose(DateTime t1, DateTime t2, int toleranceSeconds)
         {
             return Math.Abs((t1 - t2).TotalSeconds) <= toleranceSeconds;
         }
-
-
 
         private class SessionRecord
         {
