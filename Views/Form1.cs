@@ -14,6 +14,9 @@ namespace GameTimeMonitor.Views
         private readonly GameMonitoringService _gameMonitoringService;
         private readonly DatabaseService _databaseService;
 
+        private NotifyIcon trayIcon;
+        private ContextMenuStrip trayMenu;
+
         public Form1()
         {
             _databaseService = new DatabaseService();
@@ -22,6 +25,26 @@ namespace GameTimeMonitor.Views
 
             InitializeComponent();
             InitializeToolStrip();
+
+            // Initialize system tray icon and context menu
+            trayMenu = new ContextMenuStrip();
+            trayMenu.Items.Add("Restore", null, (s, e) => RestoreFromTray());
+            trayMenu.Items.Add("Exit", null, (s, e) => Application.Exit());
+
+            trayIcon = new NotifyIcon
+            {
+                Icon = SystemIcons.Application, // Or load your own .ico file
+                ContextMenuStrip = trayMenu,
+                Text = "GameTimeMonitor",
+                Visible = true
+            };
+
+            // Handle double-click on tray icon to restore
+            trayIcon.DoubleClick += (s, e) => RestoreFromTray();
+
+            // Handle minimize-to-tray
+            this.Resize += Form1_Resize;
+
             Load += Form1_Load;
 
             _gameMonitoringService.GameStatusChanged += UpdateStatus;
@@ -216,6 +239,27 @@ namespace GameTimeMonitor.Views
             int hours = (int)(timeInMinutes / 60);
             int minutes = (int)(timeInMinutes % 60);
             return $"{hours}:{minutes:D2} h";
+        }
+
+        private void Form1_Resize(object sender, EventArgs e)
+        {
+            if (WindowState == FormWindowState.Minimized)
+            {
+                Hide();
+                trayIcon.ShowBalloonTip(
+                    1000,
+                    "Minimized",
+                    "GameTimeMonitor is now running in the system tray.",
+                    ToolTipIcon.Info
+                );
+            }
+        }
+
+        private void RestoreFromTray()
+        {
+            Show();
+            WindowState = FormWindowState.Normal;
+            Activate();
         }
     }
 }
