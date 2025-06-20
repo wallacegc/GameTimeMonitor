@@ -2,7 +2,6 @@
 using GameTimeMonitor.Models;
 using GameTimeMonitor.Services;
 using Microsoft.Data.Sqlite;
-using Newtonsoft.Json;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -24,27 +23,21 @@ namespace GameTimeMonitor.Views
             _gameMonitoringService = new GameMonitoringService(_databaseService);
 
             InitializeComponent();
-            InitializeToolStrip();
+            InitializeMenuBar();
 
-            // Initialize system tray icon and context menu
             trayMenu = new ContextMenuStrip();
             trayMenu.Items.Add("Restore", null, (s, e) => RestoreFromTray());
             trayMenu.Items.Add("Exit", null, (s, e) => Application.Exit());
 
             trayIcon = new NotifyIcon
             {
-                Icon = SystemIcons.Application, // Or load your own .ico file
+                Icon = SystemIcons.Application,
                 ContextMenuStrip = trayMenu,
                 Text = "GameTimeMonitor",
                 Visible = true
             };
-
-            // Handle double-click on tray icon to restore
             trayIcon.DoubleClick += (s, e) => RestoreFromTray();
-
-            // Handle minimize-to-tray
             this.Resize += Form1_Resize;
-
             Load += Form1_Load;
 
             _gameMonitoringService.GameStatusChanged += UpdateStatus;
@@ -57,7 +50,6 @@ namespace GameTimeMonitor.Views
             };
         }
 
-        // Loads the database and game information when the form loads
         private void Form1_Load(object sender, EventArgs e)
         {
             _databaseService.InitializeDatabase();
@@ -66,17 +58,18 @@ namespace GameTimeMonitor.Views
             DisplayAllGamesTime();
         }
 
-        // Initializes the toolbar with buttons for Add Game, Update, and Remove Duplicates
-        private void InitializeToolStrip()
+        private void InitializeMenuBar()
         {
-            ToolStrip toolStrip = new ToolStrip();
+            var menuStrip = new MenuStrip();
 
-            ToolStripButton addGameButton = new ToolStripButton("Add Game");
-            addGameButton.Click += AddGameButton_Click;
-            toolStrip.Items.Add(addGameButton);
+            // FILE
+            var fileMenu = new ToolStripMenuItem("File");
+            fileMenu.DropDownItems.Add("Exit", null, (s, e) => Application.Exit());
 
-            ToolStripButton updateButton = new ToolStripButton("Update");
-            updateButton.Click += (s, e) =>
+            // GAMES
+            var gamesMenu = new ToolStripMenuItem("Games");
+            gamesMenu.DropDownItems.Add("Add Game", null, AddGameButton_Click);
+            gamesMenu.DropDownItems.Add("Update", null, (s, e) =>
             {
                 try
                 {
@@ -89,11 +82,8 @@ namespace GameTimeMonitor.Views
                 {
                     MessageBox.Show($"Error updating: {ex.Message}", "Error");
                 }
-            };
-            toolStrip.Items.Add(updateButton);
-
-            ToolStripButton removeDuplicatesButton = new ToolStripButton("Remove Duplicates");
-            removeDuplicatesButton.Click += (s, e) =>
+            });
+            gamesMenu.DropDownItems.Add("Remove Duplicates", null, (s, e) =>
             {
                 try
                 {
@@ -106,14 +96,24 @@ namespace GameTimeMonitor.Views
                 {
                     MessageBox.Show($"Error removing duplicates: {ex.Message}", "Error");
                 }
-            };
-            toolStrip.Items.Add(removeDuplicatesButton);
+            });
 
-            toolStrip.Dock = DockStyle.Top;
-            Controls.Add(toolStrip);
+            // SETTINGS
+            var settingsMenu = new ToolStripMenuItem("Settings");
+            settingsMenu.DropDownItems.Add("Options", null, (s, e) =>
+            {
+                using var optionsForm = new OptionsForm();
+                optionsForm.ShowDialog();
+            });
+
+            menuStrip.Items.Add(fileMenu);
+            menuStrip.Items.Add(gamesMenu);
+            menuStrip.Items.Add(settingsMenu);
+
+            MainMenuStrip = menuStrip;
+            Controls.Add(menuStrip);
         }
 
-        // Handles the Add Game button click to show a form and add a new game
         private void AddGameButton_Click(object sender, EventArgs e)
         {
             using var addGameForm = new AddGameForm();
@@ -126,15 +126,17 @@ namespace GameTimeMonitor.Views
             }
         }
 
-        // Displays all games and their playtime metrics in the UI
         private void DisplayAllGamesTime()
         {
             flowLayoutPanelGames.SuspendLayout();
             flowLayoutPanelGames.Controls.Clear();
 
             var today = DateTime.Today;
-            var startWeek = today.AddDays(-((int)today.DayOfWeek == 0 ? 6 : (int)today.DayOfWeek - 1));
+            var startWeek = GetStartOfWeek(today);
             var startMonth = new DateTime(today.Year, today.Month, 1);
+            var startYear = new DateTime(today.Year, 1, 1);
+
+            string selectedFilter = comboBoxTimeFilter?.SelectedItem?.ToString() ?? "Total";
 
             var gamesWithTimes = _gameController.GetGames()
                 .Select(game => new
@@ -143,9 +145,17 @@ namespace GameTimeMonitor.Views
                     TimeToday = _databaseService.GetGameTime(game.Name, today, DateTime.Now),
                     TimeWeek = _databaseService.GetGameTime(game.Name, startWeek, DateTime.Now),
                     TimeMonth = _databaseService.GetGameTime(game.Name, startMonth, DateTime.Now),
+                    TimeYear = _databaseService.GetGameTime(game.Name, startYear, DateTime.Now),
                     TimeTotal = _databaseService.GetGameTime(game.Name, DateTime.MinValue, DateTime.Now)
                 })
-                .OrderByDescending(g => g.TimeTotal)
+                .OrderByDescending(g => selectedFilter switch
+                {
+                    "Today" => g.TimeToday,
+                    "Week" => g.TimeWeek,
+                    "Month" => g.TimeMonth,
+                    "Year" => g.TimeYear,
+                    _ => g.TimeTotal
+                })
                 .ToList();
 
             foreach (var g in gamesWithTimes)
@@ -163,6 +173,7 @@ namespace GameTimeMonitor.Views
                         longestSession = duration;
                         longestSessionDate = session.StartTime.Date;
                     }
+
                     var day = session.StartTime.Date;
                     if (!hoursPerDay.ContainsKey(day)) hoursPerDay[day] = 0;
                     hoursPerDay[day] += duration.TotalMinutes;
@@ -186,7 +197,7 @@ namespace GameTimeMonitor.Views
                     Margin = new Padding(0, 0, 0, 10),
                     ForeColor = g.Game.Process == "no_process" ? Color.FromArgb(200, 0, 0) : SystemColors.ControlText,
                     Text =
-                        $"Today: {FormatTime(g.TimeToday)} | Week: {FormatTime(g.TimeWeek)} | Month: {FormatTime(g.TimeMonth)} | Total: {FormatTime(g.TimeTotal)}\n" +
+                        $"Today: {FormatTime(g.TimeToday)} | Week: {FormatTime(g.TimeWeek)} | Month: {FormatTime(g.TimeMonth)} | Year: {FormatTime(g.TimeYear)} | Total: {FormatTime(g.TimeTotal)}\n" +
                         $"🏆 Longest Session: {FormatTime(longestSession.TotalMinutes)} on {longestSessionDate:MM/dd/yyyy}\n" +
                         $"📆 Most Played Day: {maxDay.Key.ToShortDateString()} - {FormatTime(maxDay.Value)}" +
                         (g.Game.Process == "no_process" ? "\n⚠️ Please update the game process/path!" : "")
@@ -212,7 +223,6 @@ namespace GameTimeMonitor.Views
             flowLayoutPanelGames.ResumeLayout();
         }
 
-        // Updates the status label when a game status changes
         private void UpdateStatus(string gameName, string status)
         {
             string message = status == "Running" ? $"Game running: {gameName}" : $"Game: {gameName} - {status}";
@@ -222,7 +232,6 @@ namespace GameTimeMonitor.Views
                 labelStatus.Text = message;
         }
 
-        // Shows a modal with the game session history
         private void ShowGameDetails(Game game)
         {
             using var historyForm = new GameHistoryForm(game, _databaseService, _gameController);
@@ -230,7 +239,6 @@ namespace GameTimeMonitor.Views
             DisplayAllGamesTime();
         }
 
-        // Formats time in minutes into readable string (e.g., 1:45 h or 30 min)
         private string FormatTime(double timeInMinutes)
         {
             if (timeInMinutes < 60)
@@ -260,6 +268,17 @@ namespace GameTimeMonitor.Views
             Show();
             WindowState = FormWindowState.Normal;
             Activate();
+        }
+
+        private void ComboBoxTimeFilter_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            DisplayAllGamesTime();
+        }
+        private DateTime GetStartOfWeek(DateTime date)
+        {
+            DayOfWeek day = date.DayOfWeek;
+            int diff = (7 + (day - DayOfWeek.Monday)) % 7;
+            return date.AddDays(-1 * diff).Date;
         }
     }
 }
