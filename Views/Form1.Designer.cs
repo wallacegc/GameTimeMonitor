@@ -7,6 +7,7 @@
         private System.Windows.Forms.FlowLayoutPanel flowLayoutPanelGames;
         private System.Windows.Forms.ToolStripButton addGameButton;
         private System.Windows.Forms.Label labelFooter;  // Label para rodapé
+        private ComboBox comboBoxTimeFilter;
 
         protected override void Dispose(bool disposing)
         {
@@ -29,6 +30,16 @@
             labelStatus.Size = new Size(0, 25);
             labelStatus.TabIndex = 0;
 
+            comboBoxTimeFilter = new ComboBox();
+            comboBoxTimeFilter.DropDownStyle = ComboBoxStyle.DropDownList;
+            comboBoxTimeFilter.Items.AddRange(new object[] { "Today", "Week", "Month", "Year", "Total" });
+            comboBoxTimeFilter.SelectedIndex = 4; // Default to "Total"
+            comboBoxTimeFilter.Location = new Point(650, 40); 
+            comboBoxTimeFilter.Width = 100;
+            comboBoxTimeFilter.SelectedIndexChanged += ComboBoxTimeFilter_SelectedIndexChanged;
+
+            Controls.Add(comboBoxTimeFilter);
+
             // flowLayoutPanelGames
             flowLayoutPanelGames.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             flowLayoutPanelGames.AutoScroll = true;
@@ -50,7 +61,7 @@
             labelFooter.Dock = DockStyle.Bottom;
             labelFooter.Height = 25;
             labelFooter.TextAlign = ContentAlignment.MiddleCenter;
-            labelFooter.Text = "Wallace Gomes Correa - Version 0.0.1 Alpha";
+            labelFooter.Text = "Wallace Gomes Correa - Version 0.0.2 Test";
 
             // Deixa o texto meio opaco (50% de transparência)
             labelFooter.ForeColor = Color.FromArgb(128, Color.Black);
